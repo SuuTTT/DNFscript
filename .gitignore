@@ -1,0 +1,8 @@
+# ignore the .txt and .png
+*.txt
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.bmp
+*.tiff
