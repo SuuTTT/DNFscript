@@ -51,7 +51,8 @@ class PpoCnnConfigTests(unittest.TestCase):
         config = json.loads(DIAGNOSTIC_CONFIG_PATH.read_text(encoding="utf-8"))
         validate_diagnostics_config(config)
         self.assertEqual(config["ppo_timesteps"], [10000, 50000, 100000])
-        self.assertEqual(config["throughput_parallelism"], [1, 2, 4, 8])
+        self.assertEqual(config["planned_parallelism"], [1, 2, 4, 8])
+        self.assertEqual(config["throughput_parallelism"], [1])
         self.assertFalse(config["environment_kwargs"]["offscreen_sdl"])
         self.assertGreaterEqual(config["minimum_free_disk_gib"], 4)
 
