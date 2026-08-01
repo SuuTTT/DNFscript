@@ -2,13 +2,24 @@ import json
 import unittest
 from pathlib import Path
 
-from experiments.ppo_cnn_smallroom import REQUIRED_ACTIONS, load_config, validate_config
+from experiments.ppo_cnn_smallroom import REQUIRED_ACTIONS, load_config, normalize_craftium_action, validate_config
 
 
 CONFIG_PATH = Path(__file__).parents[1] / "experiments/configs/ppo_cnn_smallroom_dev.json"
 
 
 class PpoCnnConfigTests(unittest.TestCase):
+    def test_scalar_ppo_action_is_made_iterable_for_craftium(self):
+        class ScalarAction:
+            ndim = 0
+
+            def item(self):
+                return 2
+
+        self.assertEqual(normalize_craftium_action(ScalarAction()), [2])
+        self.assertEqual(normalize_craftium_action(3), [3])
+        self.assertEqual(normalize_craftium_action([1, 2]), [1, 2])
+
     def test_frozen_development_config_is_valid(self):
         config = load_config(CONFIG_PATH)
         validate_config(config)

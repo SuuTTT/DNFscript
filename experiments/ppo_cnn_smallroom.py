@@ -55,6 +55,20 @@ def _versions() -> dict[str, str]:
     return {name: importlib.metadata.version(name) for name in names}
 
 
+def normalize_craftium_action(action: Any) -> Any:
+    """Preserve vector actions while making a scalar PPO prediction iterable.
+
+    Craftium's ``DiscreteActionWrapper`` iterates over the passed action, while
+    Stable-Baselines3 returns a scalar/zero-dimensional ndarray for a single
+    non-vectorized environment.
+    """
+    if getattr(action, "ndim", None) == 0:
+        return [action.item() if hasattr(action, "item") else int(action)]
+    if isinstance(action, int):
+        return [action]
+    return action
+
+
 def evaluate(model: Any, gym: Any, seeds: list[int], max_episode_steps: int) -> list[dict[str, Any]]:
     results: list[dict[str, Any]] = []
     for seed in seeds:
@@ -66,7 +80,7 @@ def evaluate(model: Any, gym: Any, seeds: list[int], max_episode_steps: int) -> 
             steps = 0
             while steps < max_episode_steps and not (terminated or truncated):
                 action, _ = model.predict(observation, deterministic=True)
-                observation, reward, terminated, truncated, _ = environment.step(action)
+                observation, reward, terminated, truncated, _ = environment.step(normalize_craftium_action(action))
                 reward_sum += float(reward)
                 steps += 1
             results.append(
@@ -118,8 +132,8 @@ def run(config: dict[str, Any], output_dir: Path) -> dict[str, Any]:
             **config["ppo"],
         )
         model.learn(total_timesteps=config["total_timesteps"], progress_bar=False)
-        evaluation = evaluate(model, gym, config["evaluation_seeds"], config["max_episode_steps"])
         model.save(str(output_dir / "ppo_cnn_smallroom"))
+        evaluation = evaluate(model, gym, config["evaluation_seeds"], config["max_episode_steps"])
     finally:
         environment.close()
 
