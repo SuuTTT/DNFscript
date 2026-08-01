@@ -207,7 +207,8 @@ def throughput_probe(gym: Any, config: dict[str, Any], parallelism: int) -> dict
 
 
 def _run_ppo(PPO: Any, Monitor: Any, gym: Any, config: dict[str, Any], run_dir: Path,
-             device: str, total_timesteps: int, event_log: Path, parallelism: int) -> dict[str, Any]:
+             device: str, total_timesteps: int, event_log: Path, parallelism: int,
+             deadline_monotonic: float) -> dict[str, Any]:
     from stable_baselines3.common.callbacks import BaseCallback, CheckpointCallback
     from stable_baselines3.common.vec_env import SubprocVecEnv, VecMonitor
 
@@ -224,7 +225,7 @@ def _run_ppo(PPO: Any, Monitor: Any, gym: Any, config: dict[str, Any], run_dir: 
         def _on_step(self) -> bool:
             elapsed = time.monotonic() - started
             free = shutil.disk_usage(run_dir).free
-            if elapsed >= config["max_wall_seconds"]:
+            if time.monotonic() >= deadline_monotonic:
                 self.stop_reason = "wall_clock_cap"
             elif free < min_free_bytes:
                 self.stop_reason = "free_disk_guard"
@@ -302,6 +303,7 @@ def run(config: dict[str, Any], output_dir: Path) -> dict[str, Any]:
         "workspace_sync_required": True,
     })
     _append_jsonl(event_log, {"event": "started", "host": host_snapshot(torch)})
+    deadline_monotonic = time.monotonic() + config["max_wall_seconds"]
 
     throughput: list[dict[str, Any]] = []
     for amount in config["throughput_parallelism"]:
@@ -325,7 +327,8 @@ def run(config: dict[str, Any], output_dir: Path) -> dict[str, Any]:
         probe_dir.mkdir(parents=True)
         try:
             probe = _run_ppo(PPO, Monitor, gym, config, probe_dir, device,
-                             config["device_probe_timesteps"], event_log, parallelism=1)
+                             config["device_probe_timesteps"], event_log, parallelism=1,
+                             deadline_monotonic=deadline_monotonic)
             probes.append({"device": device, "status": "complete", **probe})
         except Exception as error:  # Evidence must preserve device failures, then safely prefer CPU.
             probes.append({"device": device, "status": "failed", "error": repr(error)})
@@ -340,7 +343,7 @@ def run(config: dict[str, Any], output_dir: Path) -> dict[str, Any]:
         run_dir = output_dir / f"ppo_{budget:07d}_{selected_device}"
         run_dir.mkdir(parents=True)
         result = _run_ppo(PPO, Monitor, gym, config, run_dir, selected_device, budget, event_log,
-                          parallelism=selected_parallelism)
+                          parallelism=selected_parallelism, deadline_monotonic=deadline_monotonic)
         result["budget"] = budget
         runs.append(result)
         _write_json(output_dir / "progress.json", {"selected_device": selected_device,
