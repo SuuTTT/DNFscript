@@ -8,3 +8,4 @@
 *.tiff
 __pycache__/
 *.py[cod]
+.luanti-user/

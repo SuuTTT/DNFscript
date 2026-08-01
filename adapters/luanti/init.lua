@@ -7,6 +7,8 @@ local QP_MAX_ACTIONS = 16
 local QP_MAX_STEPS = 8
 local sessions = {}
 
+mt.log("action", "[questpilot_luanti] loaded; local singleplayer guard active")
+
 mt.register_node("questpilot_luanti:token", {
     description = "QuestPilot Test Token",
     drawtype = "airlike",
@@ -20,6 +22,7 @@ mt.register_node("questpilot_luanti:token", {
 })
 
 local function tell(name, message)
+    mt.log("action", "[questpilot_luanti] " .. name .. " | " .. message)
     mt.chat_send_player(name, "QuestPilot | " .. message)
 end
 
