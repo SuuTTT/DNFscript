@@ -64,3 +64,12 @@ MINECRAFT_EDUCATION_MANIFEST = AdapterManifest(
     observation=ObservationMode.NATIVE_AGENT,
     allowed_capabilities=frozenset({"agent.detect", "agent.move", "agent.collectAll", "agent.teleportToPlayer"}),
 )
+
+
+LUANTI_MANIFEST = AdapterManifest(
+    target="Luanti local test world",
+    environment=Environment.DEVELOPER_OWNED,
+    authorization_reference="https://docs.luanti.org/for-creators/creating-mods/",
+    observation=ObservationMode.OFFICIAL_API,
+    allowed_capabilities=frozenset({"local_command", "world_read", "world_write", "local_status"}),
+)

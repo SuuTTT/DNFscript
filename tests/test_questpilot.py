@@ -7,7 +7,7 @@ from questpilot.audit import AuditLog
 from questpilot.benchmark import run_benchmark, run_perturbation_tests
 from questpilot.mock_game import MockGame
 from questpilot.model import Action, GameState
-from questpilot.integration_gate import AdapterManifest, Environment, MINECRAFT_EDUCATION_MANIFEST, evaluate_manifest
+from questpilot.integration_gate import AdapterManifest, Environment, LUANTI_MANIFEST, MINECRAFT_EDUCATION_MANIFEST, evaluate_manifest
 
 class QuestPilotTests(unittest.TestCase):
     def test_fixed_30_chore_benchmark_hits_safety_gate(self):
@@ -35,6 +35,8 @@ class QuestPilotTests(unittest.TestCase):
         self.assertTrue(any(event.kind == "approval_required" for event in result.audit.events))
     def test_minecraft_education_manifest_is_authorized_and_bounded(self):
         self.assertTrue(evaluate_manifest(MINECRAFT_EDUCATION_MANIFEST).allowed)
+    def test_luanti_manifest_is_authorized_and_bounded(self):
+        self.assertTrue(evaluate_manifest(LUANTI_MANIFEST).allowed)
     def test_future_production_mobile_adapter_is_rejected(self):
         manifest = AdapterManifest("future mobile", Environment.PRODUCTION, "", MINECRAFT_EDUCATION_MANIFEST.observation, frozenset({"agent.move", "payment"}))
         decision = evaluate_manifest(manifest)
@@ -49,3 +51,10 @@ class QuestPilotTests(unittest.TestCase):
         self.assertIn("agent.collectAll()", script)
         self.assertNotIn("loops.forever", script)
         self.assertNotIn("agent.attack", script)
+    def test_luanti_script_is_singleplayer_only_and_never_uses_web_or_credentials(self):
+        script = (Path(__file__).parents[1] / "adapters/luanti/init.lua").read_text()
+        self.assertIn("mt.is_singleplayer()", script)
+        self.assertIn('mt.register_chatcommand("qp_stop"', script)
+        self.assertIn('"questpilot_luanti:token"', script)
+        self.assertNotIn("request_http_api", script)
+        self.assertNotIn("credentials", script)

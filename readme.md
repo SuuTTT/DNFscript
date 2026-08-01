@@ -21,6 +21,10 @@ Code Builder Agent script. See `adapters/minecraft_education/README.md` and
 `docs/ADAPTER_ROADMAP.md`; it runs only in an owned/demo Education world and
 does not automate consumer or commercial live-game clients.
 
+For a free local integration, use the Luanti (formerly Minetest) test-world
+adapter at `adapters/luanti/`. It is a singleplayer-only Lua mod that owns and
+collects only its own seeded test tokens.
+
 # Historical prompt (not an execution guide)
 
 ## 1. jitan
