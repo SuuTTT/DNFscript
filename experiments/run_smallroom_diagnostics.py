@@ -114,6 +114,13 @@ def choose_device(probes: list[dict[str, Any]], minimum_cuda_speedup: float) -> 
     return "cpu"
 
 
+def choose_parallelism(samples: list[dict[str, Any]]) -> int:
+    complete = [sample for sample in samples if sample.get("status") == "complete"]
+    if not complete:
+        return 1
+    return int(max(complete, key=lambda sample: sample["transitions_per_second"])["parallelism"])
+
+
 def normalize_craftium_action(action: Any) -> Any:
     if (getattr(action, "size", None) == 1 or getattr(action, "ndim", None) == 0) and hasattr(action, "item"):
         return int(action.item())
@@ -194,8 +201,9 @@ def throughput_probe(gym: Any, config: dict[str, Any], parallelism: int) -> dict
 
 
 def _run_ppo(PPO: Any, Monitor: Any, gym: Any, config: dict[str, Any], run_dir: Path,
-             device: str, total_timesteps: int, event_log: Path) -> dict[str, Any]:
+             device: str, total_timesteps: int, event_log: Path, parallelism: int) -> dict[str, Any]:
     from stable_baselines3.common.callbacks import BaseCallback, CheckpointCallback
+    from stable_baselines3.common.vec_env import SubprocVecEnv, VecMonitor
 
     started = time.monotonic()
     min_free_bytes = config["minimum_free_disk_gib"] * 1024 ** 3
@@ -228,10 +236,17 @@ def _run_ppo(PPO: Any, Monitor: Any, gym: Any, config: dict[str, Any], run_dir: 
                 self.last_steps, self.last_time = self.num_timesteps, now
             return True
 
-    environment = Monitor(gym.make(config["environment"], max_timesteps=config["max_episode_steps"]))
+    if parallelism == 1:
+        environment: Any = Monitor(gym.make(config["environment"], max_timesteps=config["max_episode_steps"]))
+    else:
+        environment = VecMonitor(SubprocVecEnv(
+            [partial(make_smallroom_environment, config["max_episode_steps"])
+             for _ in range(parallelism)],
+            start_method="spawn",
+        ))
     callback = GuardedMetricsCallback()
     checkpoint = CheckpointCallback(
-        save_freq=max(1, config["checkpoint_interval"]),
+        save_freq=max(1, config["checkpoint_interval"] // parallelism),
         save_path=str(run_dir / "checkpoints"),
         name_prefix="ppo_cnn_smallroom",
     )
@@ -246,7 +261,8 @@ def _run_ppo(PPO: Any, Monitor: Any, gym: Any, config: dict[str, Any], run_dir: 
     wall_seconds = time.monotonic() - started
     actual_steps = callback.num_timesteps
     result = {
-        "device": device, "requested_timesteps": total_timesteps, "actual_timesteps": actual_steps,
+        "device": device, "parallelism": parallelism, "requested_timesteps": total_timesteps,
+        "actual_timesteps": actual_steps,
         "wall_seconds": round(wall_seconds, 6),
         "steps_per_second": actual_steps / wall_seconds if wall_seconds else 0.0,
         "safe_stop_reason": callback.stop_reason, "evaluation": evaluation,
@@ -279,8 +295,16 @@ def run(config: dict[str, Any], output_dir: Path) -> dict[str, Any]:
     })
     _append_jsonl(event_log, {"event": "started", "host": host_snapshot(torch)})
 
-    throughput = [throughput_probe(gym, config, amount) for amount in config["throughput_parallelism"]]
+    throughput: list[dict[str, Any]] = []
+    for amount in config["throughput_parallelism"]:
+        try:
+            throughput.append({"status": "complete", **throughput_probe(gym, config, amount)})
+        except Exception as error:
+            throughput.append({"status": "failed", "parallelism": amount, "error": repr(error)})
+            _append_jsonl(event_log, {"event": "throughput_probe_failed", "parallelism": amount,
+                                      "error": repr(error)})
     _write_json(output_dir / "throughput.json", {"samples": throughput})
+    selected_parallelism = choose_parallelism(throughput)
     random = random_control(gym, config)
     _write_json(output_dir / "random_control.json", random)
 
@@ -293,26 +317,30 @@ def run(config: dict[str, Any], output_dir: Path) -> dict[str, Any]:
         probe_dir.mkdir(parents=True)
         try:
             probe = _run_ppo(PPO, Monitor, gym, config, probe_dir, device,
-                             config["device_probe_timesteps"], event_log)
+                             config["device_probe_timesteps"], event_log, parallelism=1)
             probes.append({"device": device, "status": "complete", **probe})
         except Exception as error:  # Evidence must preserve device failures, then safely prefer CPU.
             probes.append({"device": device, "status": "failed", "error": repr(error)})
             _append_jsonl(event_log, {"event": "device_probe_failed", "device": device, "error": repr(error)})
     selected_device = choose_device(probes, config["minimum_cuda_speedup"])
     _write_json(output_dir / "device_selection.json", {"probes": probes, "selected_device": selected_device,
+                                                         "selected_parallelism": selected_parallelism,
                                                          "minimum_cuda_speedup": config["minimum_cuda_speedup"]})
 
     runs: list[dict[str, Any]] = []
     for budget in config["ppo_timesteps"]:
         run_dir = output_dir / f"ppo_{budget:07d}_{selected_device}"
         run_dir.mkdir(parents=True)
-        result = _run_ppo(PPO, Monitor, gym, config, run_dir, selected_device, budget, event_log)
+        result = _run_ppo(PPO, Monitor, gym, config, run_dir, selected_device, budget, event_log,
+                          parallelism=selected_parallelism)
         result["budget"] = budget
         runs.append(result)
-        _write_json(output_dir / "progress.json", {"selected_device": selected_device, "runs": runs})
+        _write_json(output_dir / "progress.json", {"selected_device": selected_device,
+                                                     "selected_parallelism": selected_parallelism, "runs": runs})
         if result["safe_stop_reason"]:
             break
-    report = {"run_id": config["run_id"], "selected_device": selected_device, "throughput": throughput,
+    report = {"run_id": config["run_id"], "selected_device": selected_device,
+              "selected_parallelism": selected_parallelism, "throughput": throughput,
               "random_control": random, "runs": runs, "heldout_seeds_inspected": False,
               "commercial_game_interaction": False, "incremental_project_cost_usd": 0.0}
     _write_json(output_dir / "result.json", report)

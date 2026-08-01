@@ -3,7 +3,11 @@ import unittest
 from pathlib import Path
 
 from experiments.ppo_cnn_smallroom import REQUIRED_ACTIONS, load_config, normalize_craftium_action, validate_config
-from experiments.run_smallroom_diagnostics import choose_device, validate_config as validate_diagnostics_config
+from experiments.run_smallroom_diagnostics import (
+    choose_device,
+    choose_parallelism,
+    validate_config as validate_diagnostics_config,
+)
 
 
 CONFIG_PATH = Path(__file__).parents[1] / "experiments/configs/ppo_cnn_smallroom_dev.json"
@@ -68,3 +72,12 @@ class PpoCnnConfigTests(unittest.TestCase):
         self.assertEqual(choose_device(probes, 1.15), "cpu")
         probes[1]["steps_per_second"] = 115.0
         self.assertEqual(choose_device(probes, 1.15), "cuda")
+
+    def test_parallelism_uses_fastest_working_probe_with_safe_fallback(self):
+        samples = [
+            {"status": "complete", "parallelism": 1, "transitions_per_second": 100.0},
+            {"status": "failed", "parallelism": 2, "error": "worker failed"},
+            {"status": "complete", "parallelism": 4, "transitions_per_second": 220.0},
+        ]
+        self.assertEqual(choose_parallelism(samples), 4)
+        self.assertEqual(choose_parallelism([]), 1)
