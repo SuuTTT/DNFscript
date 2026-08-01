@@ -1,4 +1,22 @@
-# prompt
+# DNFscript / QuestPilot Phase 1
+
+The historical scripts below are archived context only. **Do not run them
+against any commercial game.** QuestPilot Phase 1 adds a deterministic,
+offline-only mock and safety-gated vertical slice with no capture backend,
+credentials, network client, input injection, or third-party dependency.
+
+Run the fixed benchmark:
+
+```bash
+PYTHONPATH=. python3 -m questpilot.benchmark
+PYTHONPATH=. python3 -m unittest discover -s tests -v
+```
+
+The agent defaults to dry-run; the in-memory mock is the only execution target.
+See `docs/PERMISSION_MATRIX.md` and `docs/BUSINESS_GATE.md` before considering
+any future integration.
+
+# Historical prompt (not an execution guide)
 
 ## 1. jitan
 

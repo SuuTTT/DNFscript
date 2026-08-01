@@ -6,3 +6,5 @@
 *.gif
 *.bmp
 *.tiff
+__pycache__/
+*.py[cod]
