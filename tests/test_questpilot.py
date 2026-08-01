@@ -7,6 +7,7 @@ from questpilot.audit import AuditLog
 from questpilot.benchmark import run_benchmark, run_perturbation_tests
 from questpilot.mock_game import MockGame
 from questpilot.model import Action, GameState
+from questpilot.integration_gate import AdapterManifest, Environment, MINECRAFT_EDUCATION_MANIFEST, evaluate_manifest
 
 class QuestPilotTests(unittest.TestCase):
     def test_fixed_30_chore_benchmark_hits_safety_gate(self):
@@ -32,3 +33,19 @@ class QuestPilotTests(unittest.TestCase):
         result = QuestPilotAgent().run(MockGame({GameState.LOGIN: "action_uncertain"}))
         self.assertTrue(result.safe_stop); self.assertEqual(result.reason, "uncertain action"); self.assertEqual(result.actions, [])
         self.assertTrue(any(event.kind == "approval_required" for event in result.audit.events))
+    def test_minecraft_education_manifest_is_authorized_and_bounded(self):
+        self.assertTrue(evaluate_manifest(MINECRAFT_EDUCATION_MANIFEST).allowed)
+    def test_future_production_mobile_adapter_is_rejected(self):
+        manifest = AdapterManifest("future mobile", Environment.PRODUCTION, "", MINECRAFT_EDUCATION_MANIFEST.observation, frozenset({"agent.move", "payment"}))
+        decision = evaluate_manifest(manifest)
+        self.assertFalse(decision.allowed)
+        self.assertIn("production environments are never eligible", decision.reasons)
+        self.assertTrue(any("missing" in reason for reason in decision.reasons))
+        self.assertTrue(any("payment" in reason for reason in decision.reasons))
+    def test_minecraft_script_uses_only_bounded_human_stepped_flow(self):
+        script = (Path(__file__).parents[1] / "adapters/minecraft_education/questpilot_collection.ts").read_text()
+        self.assertIn('player.onChat("qp_start"', script)
+        self.assertIn('player.onChat("qp_stop"', script)
+        self.assertIn("agent.collectAll()", script)
+        self.assertNotIn("loops.forever", script)
+        self.assertNotIn("agent.attack", script)

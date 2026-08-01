@@ -16,6 +16,11 @@ The agent defaults to dry-run; the in-memory mock is the only execution target.
 See `docs/PERMISSION_MATRIX.md` and `docs/BUSINESS_GATE.md` before considering
 any future integration.
 
+The first publisher-supported extension is a bounded Minecraft Education
+Code Builder Agent script. See `adapters/minecraft_education/README.md` and
+`docs/ADAPTER_ROADMAP.md`; it runs only in an owned/demo Education world and
+does not automate consumer or commercial live-game clients.
+
 # Historical prompt (not an execution guide)
 
 ## 1. jitan
