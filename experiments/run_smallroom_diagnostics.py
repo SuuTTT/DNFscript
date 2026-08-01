@@ -37,6 +37,9 @@ def validate_config(config: dict[str, Any]) -> None:
         raise ValueError("only the non-combat SmallRoom environment is permitted")
     if config.get("action_vocabulary") != REQUIRED_ACTIONS:
         raise ValueError("action vocabulary must remain the frozen SmallRoom allowlist")
+    environment_kwargs = config.get("environment_kwargs")
+    if not isinstance(environment_kwargs, dict) or not isinstance(environment_kwargs.get("offscreen_sdl"), bool):
+        raise ValueError("an explicit offscreen_sdl environment setting is required")
     seeds = [config.get("train_seed"), *config.get("evaluation_seeds", [])]
     if any(not isinstance(seed, int) or seed not in DEVELOPMENT_SEEDS for seed in seeds):
         raise ValueError("held-out or invalid seeds are forbidden")
@@ -127,18 +130,20 @@ def normalize_craftium_action(action: Any) -> Any:
     return int(action) if isinstance(action, int) else action
 
 
-def make_smallroom_environment(max_episode_steps: int) -> Any:
+def make_smallroom_environment(max_episode_steps: int, environment_kwargs: dict[str, Any]) -> Any:
     """Top-level factory so ``SubprocVecEnv(..., start_method='spawn')`` can pickle it."""
     import craftium  # noqa: F401 - child process must also register the environment
     import gymnasium as gym
 
-    return gym.make("Craftium/SmallRoom-v0", max_timesteps=max_episode_steps)
+    return gym.make("Craftium/SmallRoom-v0", max_timesteps=max_episode_steps, **environment_kwargs)
 
 
-def evaluate(model: Any, gym: Any, seeds: list[int], max_episode_steps: int) -> list[dict[str, Any]]:
+def evaluate(model: Any, gym: Any, seeds: list[int], max_episode_steps: int,
+             environment_kwargs: dict[str, Any]) -> list[dict[str, Any]]:
     results: list[dict[str, Any]] = []
     for seed in seeds:
-        environment = gym.make("Craftium/SmallRoom-v0", max_timesteps=max_episode_steps)
+        environment = gym.make("Craftium/SmallRoom-v0", max_timesteps=max_episode_steps,
+                               **environment_kwargs)
         try:
             observation, _ = environment.reset(seed=seed)
             reward_sum, steps = 0.0, 0
@@ -158,7 +163,8 @@ def evaluate(model: Any, gym: Any, seeds: list[int], max_episode_steps: int) -> 
 def random_control(gym: Any, config: dict[str, Any]) -> dict[str, Any]:
     episodes: list[dict[str, Any]] = []
     for seed in config["evaluation_seeds"]:
-        environment = gym.make(config["environment"], max_timesteps=config["max_episode_steps"])
+        environment = gym.make(config["environment"], max_timesteps=config["max_episode_steps"],
+                               **config["environment_kwargs"])
         try:
             observation, _ = environment.reset(seed=seed)
             del observation
@@ -180,7 +186,7 @@ def throughput_probe(gym: Any, config: dict[str, Any], parallelism: int) -> dict
     """Measure independent Craftium simulators in actual spawned worker processes."""
     from stable_baselines3.common.vec_env import SubprocVecEnv
 
-    environment_fns = [partial(make_smallroom_environment, config["max_episode_steps"])
+    environment_fns = [partial(make_smallroom_environment, config["max_episode_steps"], config["environment_kwargs"])
                        for _ in range(parallelism)]
     environment = SubprocVecEnv(environment_fns, start_method="spawn")
     try:
@@ -237,10 +243,11 @@ def _run_ppo(PPO: Any, Monitor: Any, gym: Any, config: dict[str, Any], run_dir: 
             return True
 
     if parallelism == 1:
-        environment: Any = Monitor(gym.make(config["environment"], max_timesteps=config["max_episode_steps"]))
+        environment: Any = Monitor(gym.make(config["environment"], max_timesteps=config["max_episode_steps"],
+                                             **config["environment_kwargs"]))
     else:
         environment = VecMonitor(SubprocVecEnv(
-            [partial(make_smallroom_environment, config["max_episode_steps"])
+            [partial(make_smallroom_environment, config["max_episode_steps"], config["environment_kwargs"])
              for _ in range(parallelism)],
             start_method="spawn",
         ))
@@ -255,7 +262,8 @@ def _run_ppo(PPO: Any, Monitor: Any, gym: Any, config: dict[str, Any], run_dir: 
                     tensorboard_log=str(run_dir / "tensorboard"), **config["ppo"])
         model.learn(total_timesteps=total_timesteps, callback=[callback, checkpoint], progress_bar=False)
         model.save(str(run_dir / "model"))
-        evaluation = evaluate(model, gym, config["evaluation_seeds"], config["max_episode_steps"])
+        evaluation = evaluate(model, gym, config["evaluation_seeds"], config["max_episode_steps"],
+                              config["environment_kwargs"])
     finally:
         environment.close()
     wall_seconds = time.monotonic() - started

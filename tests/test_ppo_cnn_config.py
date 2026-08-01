@@ -52,6 +52,7 @@ class PpoCnnConfigTests(unittest.TestCase):
         validate_diagnostics_config(config)
         self.assertEqual(config["ppo_timesteps"], [10000, 50000, 100000])
         self.assertEqual(config["throughput_parallelism"], [1, 2, 4, 8])
+        self.assertFalse(config["environment_kwargs"]["offscreen_sdl"])
         self.assertGreaterEqual(config["minimum_free_disk_gib"], 4)
 
     def test_diagnostics_rejects_heldout_and_missing_lifecycle_guard(self):
@@ -62,6 +63,10 @@ class PpoCnnConfigTests(unittest.TestCase):
         config = json.loads(DIAGNOSTIC_CONFIG_PATH.read_text(encoding="utf-8"))
         config["safety"]["instance_lifecycle_forbidden"] = False
         with self.assertRaisesRegex(ValueError, "instance-lifecycle"):
+            validate_diagnostics_config(config)
+        config = json.loads(DIAGNOSTIC_CONFIG_PATH.read_text(encoding="utf-8"))
+        config["environment_kwargs"] = {}
+        with self.assertRaisesRegex(ValueError, "offscreen_sdl"):
             validate_diagnostics_config(config)
 
     def test_cuda_is_selected_only_for_material_measured_speedup(self):

@@ -5,6 +5,7 @@
   "craftium_commit": "8eb8707cb756df47e76131a0058ab724d2383c76",
   "observation": "64x64 RGB only; no coordinates, inventory, evaluator label, or Lua state",
   "action_vocabulary": ["nop", "forward", "mouse x+", "mouse x-"],
+  "environment_kwargs": {"offscreen_sdl": false},
   "train_seed": 0,
   "evaluation_seeds": [10, 11, 12, 13, 14],
   "max_episode_steps": 500,
