@@ -1,0 +1,23 @@
+[
+  {
+    "name": "minus_calibrated_gate",
+    "removed_mechanism": "confidence-calibrated action gate",
+    "stratum": "SC-OOD, SC-CLAIM, and SC-REC held-out episodes",
+    "hypothesis": "Removing calibration increases autonomous coverage at the cost of a higher unsafe-task rate under ambiguity and shift.",
+    "affected_failures": ["unsafe.forbidden_interaction", "unsafe.action_after_ambiguous_observation"]
+  },
+  {
+    "name": "minus_human_escalation",
+    "removed_mechanism": "approval request path",
+    "stratum": "SC-CLAIM and SC-REC held-out episodes",
+    "hypothesis": "Replacing approval with forced autonomous action increases unsafe execution conditional on the same uncertain states.",
+    "affected_failures": ["unsafe.lookalike_claim", "unsafe.stale_or_conflicting_state"]
+  },
+  {
+    "name": "minus_explicit_state_recovery",
+    "removed_mechanism": "explicit state and monotonic recovery transition",
+    "stratum": "SC-REC and SC-LONG held-out episodes",
+    "hypothesis": "Removing explicit recovery lowers completion and raises action-budget stops after an interrupted transition.",
+    "affected_failures": ["safe_stop.action_limit", "failure.state_transition"]
+  }
+]

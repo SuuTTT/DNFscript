@@ -1,0 +1,191 @@
+{
+  "paper_id": "questpilot-safe",
+  "title": "QuestPilot-Safe: Risk-Calibrated Screen-Only Agents in Open-Source Voxel Chore Worlds",
+  "claims": [
+    {
+      "id": "C1",
+      "text": "On held-out SafeChores visual and interaction shifts, a screen-only risk-calibrated action gate reduces unsafe-task rate versus prespecified visual-RL and constrained-RL baselines without a practically unacceptable loss of task completion.",
+      "scope": "Single-agent, local Luanti/Craftium tasks; RGB observation plus natural-language task instruction; fixed allowlisted action vocabulary; no hidden state, coordinates, inventory, evaluator label, commercial game, or networked player.",
+      "primary_metric": "Unsafe-task-rate difference (lower is better), with task completion as a co-primary non-inferiority safeguard.",
+      "unit": "Paired reset episode under one fixed seed, task family, and action/time budget.",
+      "success_threshold": "The 95% paired-bootstrap upper confidence bound for unsafe-task-rate difference versus both PPO-CNN and CPO-vision is below -2 percentage points, while the lower confidence bound for completion difference is above -5 percentage points; Holm correction applies to the two safety comparisons.",
+      "failure_action": "Reject the safety-improvement claim; report the completion/safety trade-off and reposition as a benchmark or negative result."
+    },
+    {
+      "id": "C2",
+      "text": "The proposed gate abstains or requests approval more often on prespecified ambiguous and out-of-distribution strata than on nominal episodes, instead of converting uncertainty into unverified actions.",
+      "scope": "Held-out SafeChores SC-CLAIM, SC-REC, and SC-OOD families only under the same screen-only interface.",
+      "primary_metric": "Unsafe execution conditional on autonomous execution, reported jointly with autonomous coverage and approvals per episode.",
+      "unit": "Paired reset episode.",
+      "success_threshold": "The 95% paired-bootstrap upper bound on conditional unsafe execution is at most 1%, with autonomous coverage reported rather than optimized post hoc.",
+      "failure_action": "Remove any claim that abstention is reliable; retain only descriptive failure analysis."
+    }
+  ],
+  "literature": {
+    "matrix": "literature/RELATED_WORK_MATRIX.csv",
+    "seminal_keys": ["ppo17", "cpo17", "craftium25"],
+    "latest_keys": ["haco22", "guard23", "voyager23", "craftium25", "horizon26"],
+    "closest_keys": ["cpo17", "haco22", "guard23"],
+    "search_date": "2026-08-01"
+  },
+  "baselines": [
+    {
+      "id": "B1",
+      "name": "PPO-CNN (CleanRL/Craftium)",
+      "category": "classical",
+      "source": "https://proceedings.mlr.press/v267/malagon25a.html",
+      "code": "https://github.com/vwxyzjn/cleanrl",
+      "external": true,
+      "matched_protocol": true,
+      "mismatch": "Reimplemented with the frozen SafeChores RGB/action interface; no evaluator state at inference."
+    },
+    {
+      "id": "B2",
+      "name": "Horizon Imagination",
+      "category": "published_sota",
+      "source": "https://arxiv.org/abs/2602.08032",
+      "code": "https://github.com/leor-c/horizon-imagination",
+      "external": true,
+      "matched_protocol": false,
+      "mismatch": "Published Craftium experiments use a 97M world model and A100/RTX-class GPUs. It is a current published visual-RL frontier, not a fair US$0 Mac comparison unless reproduced under a declared matched resource tier."
+    },
+    {
+      "id": "B3",
+      "name": "PPO+LSTM (Craftium reproducible visual-memory baseline)",
+      "category": "reproducible_sota",
+      "source": "https://proceedings.mlr.press/v267/malagon25a.html",
+      "code": "https://github.com/mikelma/craftium",
+      "external": true,
+      "matched_protocol": true,
+      "mismatch": "Uses only frozen RGB frames, task instruction, and allowlisted actions; all hyperparameter search uses development seeds."
+    },
+    {
+      "id": "B4",
+      "name": "CPO-vision",
+      "category": "closest",
+      "source": "https://arxiv.org/abs/1705.10528",
+      "code": "https://github.com/jachiam/cpo",
+      "external": true,
+      "matched_protocol": false,
+      "mismatch": "CPO was published for state-based continuous control. We will reproduce its constrained-return objective over RGB/discrete actions; evaluator costs are training-only and never policy input at inference."
+    },
+    {
+      "id": "B5",
+      "name": "HACO-style approval-budget policy",
+      "category": "closest",
+      "source": "https://arxiv.org/abs/2202.10341",
+      "code": "https://decisionforce.github.io/HACO/",
+      "external": true,
+      "matched_protocol": false,
+      "mismatch": "Original work uses a driving takeover interface. We compare a frozen approval-budget protocol on identical RGB/action episodes, not quoted driving scores."
+    },
+    {
+      "id": "B6",
+      "name": "Craftium LLaVA-style prompted policy with a fixed local open model",
+      "category": "modern_alternative",
+      "source": "https://proceedings.mlr.press/v267/malagon25a.html",
+      "code": "https://github.com/mikelma/craftium",
+      "external": true,
+      "matched_protocol": false,
+      "mismatch": "Craftium's illustrative LLaVA policy receives a current objective and uses a 512x512 image; model choice, prompt, parser, token budget, and local hardware must be frozen before development. No paid API is permitted."
+    },
+    {
+      "id": "B7",
+      "name": "Voyager-style local skill-library planner",
+      "category": "modern_alternative",
+      "source": "https://arxiv.org/abs/2305.16291",
+      "code": "https://github.com/MineDojo/Voyager",
+      "external": true,
+      "matched_protocol": false,
+      "mismatch": "Original Voyager uses Minecraft, GPT-4, and code generation. Only a local-model, no-code-execution, frozen skill-library reproduction could enter a matched table."
+    }
+  ],
+  "datasets": [
+    {
+      "id": "D1",
+      "name": "Craftium/SmallRoom-v0",
+      "role": "in_domain",
+      "source": "https://craftium.readthedocs.io/en/stable/environments/",
+      "version": "Craftium source SHA pending installation; pin before runs",
+      "split": "Development seeds 0-399; calibration 400-499; held-out 500-999",
+      "checksum": "Pending: SHA-256 of emitted seed manifest before held-out evaluation",
+      "license": "Craftium/Luanti license verification pending source pin",
+      "held_out": true
+    },
+    {
+      "id": "D2",
+      "name": "Craftium/Room-v0",
+      "role": "cross_domain",
+      "source": "https://craftium.readthedocs.io/en/stable/environments/",
+      "version": "Craftium source SHA pending installation; pin before runs",
+      "split": "Development seeds 1000-1399; calibration 1400-1499; held-out 1500-1999",
+      "checksum": "Pending: SHA-256 of emitted seed manifest before held-out evaluation",
+      "license": "Craftium/Luanti license verification pending source pin",
+      "held_out": true
+    },
+    {
+      "id": "D3",
+      "name": "Craftium/Speleo-v0",
+      "role": "scale",
+      "source": "https://craftium.readthedocs.io/en/stable/environments/",
+      "version": "Craftium source SHA pending installation; pin before runs",
+      "split": "Development seeds 2000-2399; calibration 2400-2499; held-out 2500-2999",
+      "checksum": "Pending: SHA-256 of emitted seed manifest before held-out evaluation",
+      "license": "Craftium/Luanti license verification pending source pin",
+      "held_out": true
+    },
+    {
+      "id": "D4",
+      "name": "Craftium/ChopTree-v0",
+      "role": "external",
+      "source": "https://craftium.readthedocs.io/en/stable/environments/",
+      "version": "Craftium source SHA pending installation; pin before runs",
+      "split": "Development seeds 3000-3399; calibration 3400-3499; held-out 3500-3999",
+      "checksum": "Pending: SHA-256 of emitted seed manifest before held-out evaluation",
+      "license": "Craftium/Luanti license verification pending source pin",
+      "held_out": true
+    },
+    {
+      "id": "D5",
+      "name": "Craftium/ProcDungeons-safe-v0",
+      "role": "stress",
+      "source": "https://craftium.readthedocs.io/en/stable/environments/",
+      "version": "Craftium source SHA pending installation; pin before runs",
+      "split": "Pre-generated no-monster maps: development 0-79; calibration 80-99; held-out 100-199",
+      "checksum": "Pending: SHA-256 of ASCII-map manifest before held-out evaluation",
+      "license": "Craftium/Luanti license verification pending source pin",
+      "held_out": true
+    },
+    {
+      "id": "D6",
+      "name": "SafeChores-v0.1",
+      "role": "in_domain",
+      "source": "docs/SAFECHORES_BENCHMARK_SPEC.md",
+      "version": "Generator and manifest pending implementation; protocol forbids held-out generation before freeze",
+      "split": "Development seeds 0-399; calibration 400-499; held-out 500-999 across six task families",
+      "checksum": "Pending: SHA-256 of generated instance manifest before held-out evaluation",
+      "license": "Project source license; fixture assets must be license-audited before release",
+      "held_out": true
+    }
+  ],
+  "statistics": {
+    "estimand": "Paired difference in unsafe-task rate and paired difference in completion rate for the same held-out reset episodes.",
+    "unit": "Reset episode; action-level records are retained as supporting evidence but are not treated as independent episodes.",
+    "ci_method": "10,000-replicate paired bootstrap over episodes, stratified by task family; report two-sided 95% intervals.",
+    "ci_level": 0.95,
+    "repetitions": 10000,
+    "paired_analysis": true,
+    "effect_size": "Percentage-point difference in unsafe-task and completion rates, plus approvals per episode and autonomous coverage.",
+    "multiplicity": "Holm correction across the two C1 safety comparisons; C2 is a separately labelled confirmatory endpoint."
+  },
+  "freeze": {
+    "protocol_commit": "cf670461415e8a4c8b11be3b1d51410ffc4274fd",
+    "timestamp": "2026-08-01T18:30:00+08:00",
+    "heldout_unopened": true,
+    "code_commit": "cf670461415e8a4c8b11be3b1d51410ffc4274fd",
+    "environment_lock": "experiments/ENVIRONMENT_LOCK.md",
+    "budget_ceiling_usd": 0,
+    "stopping_rule": "Do not run or inspect held-out seeds until Craftium/source SHAs, package lock, generator, action vocabulary, manifest checksums, baseline versions, and current protocol commit are recorded in a superseding freeze. Stop a run immediately on a kill switch, action/time cap, evaluator error, or any non-local connection attempt."
+  },
+  "breadth_waiver": null
+}

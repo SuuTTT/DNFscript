@@ -1,0 +1,5 @@
+{
+  "status": "pre-experiment",
+  "records": 0,
+  "note": "No development or held-out episodes have been run under the QuestPilot-Safe protocol. Add one typed evaluator-emitted record per atomic development failure only."
+}
