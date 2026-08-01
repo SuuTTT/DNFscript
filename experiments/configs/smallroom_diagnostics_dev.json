@@ -1,0 +1,38 @@
+{
+  "run_id": "smallroom-diagnostics-dev-v1",
+  "phase": "development",
+  "environment": "Craftium/SmallRoom-v0",
+  "craftium_commit": "8eb8707cb756df47e76131a0058ab724d2383c76",
+  "observation": "64x64 RGB only; no coordinates, inventory, evaluator label, or Lua state",
+  "action_vocabulary": ["nop", "forward", "mouse x+", "mouse x-"],
+  "train_seed": 0,
+  "evaluation_seeds": [10, 11, 12, 13, 14],
+  "max_episode_steps": 500,
+  "throughput_parallelism": [1, 2, 4, 8],
+  "throughput_steps_per_environment": 64,
+  "device_probe_timesteps": 2048,
+  "device_order": ["cpu", "cuda"],
+  "minimum_cuda_speedup": 1.15,
+  "ppo_timesteps": [10000, 50000, 100000],
+  "checkpoint_interval": 10000,
+  "max_wall_seconds": 27000,
+  "minimum_free_disk_gib": 4,
+  "ppo": {
+    "learning_rate": 0.00025,
+    "n_steps": 256,
+    "batch_size": 64,
+    "n_epochs": 4,
+    "gamma": 0.99,
+    "gae_lambda": 0.95,
+    "clip_range": 0.1,
+    "ent_coef": 0.01
+  },
+  "safety": {
+    "heldout_seeds_forbidden": true,
+    "commercial_games_forbidden": true,
+    "networked_players_forbidden": true,
+    "new_rental_forbidden": true,
+    "instance_lifecycle_forbidden": true,
+    "output_sync_required": true
+  }
+}
