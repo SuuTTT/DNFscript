@@ -16,6 +16,7 @@ import shutil
 import subprocess
 import sys
 import time
+from functools import partial
 from pathlib import Path
 from typing import Any
 
@@ -119,6 +120,14 @@ def normalize_craftium_action(action: Any) -> Any:
     return int(action) if isinstance(action, int) else action
 
 
+def make_smallroom_environment(max_episode_steps: int) -> Any:
+    """Top-level factory so ``SubprocVecEnv(..., start_method='spawn')`` can pickle it."""
+    import craftium  # noqa: F401 - child process must also register the environment
+    import gymnasium as gym
+
+    return gym.make("Craftium/SmallRoom-v0", max_timesteps=max_episode_steps)
+
+
 def evaluate(model: Any, gym: Any, seeds: list[int], max_episode_steps: int) -> list[dict[str, Any]]:
     results: list[dict[str, Any]] = []
     for seed in seeds:
@@ -161,27 +170,27 @@ def random_control(gym: Any, config: dict[str, Any]) -> dict[str, Any]:
 
 
 def throughput_probe(gym: Any, config: dict[str, Any], parallelism: int) -> dict[str, Any]:
-    """Measure round-robin independent environments; it does not train a policy."""
-    environments = [gym.make(config["environment"], max_timesteps=config["max_episode_steps"])
-                    for _ in range(parallelism)]
+    """Measure independent Craftium simulators in actual spawned worker processes."""
+    from stable_baselines3.common.vec_env import SubprocVecEnv
+
+    environment_fns = [partial(make_smallroom_environment, config["max_episode_steps"])
+                       for _ in range(parallelism)]
+    environment = SubprocVecEnv(environment_fns, start_method="spawn")
     try:
-        observations = [environment.reset(seed=config["train_seed"] + index)[0]
-                        for index, environment in enumerate(environments)]
-        del observations
+        environment.seed(config["train_seed"])
+        environment.reset()
         transitions = parallelism * config["throughput_steps_per_environment"]
         started = time.monotonic()
-        for step in range(config["throughput_steps_per_environment"]):
-            for index, environment in enumerate(environments):
-                _, _, terminated, truncated, _ = environment.step(environment.action_space.sample())
-                if terminated or truncated:
-                    environment.reset(seed=config["train_seed"] + index + step + 1)
+        for _ in range(config["throughput_steps_per_environment"]):
+            actions = [environment.action_space.sample() for _ in range(parallelism)]
+            environment.step(actions)
         wall_seconds = time.monotonic() - started
         return {"parallelism": parallelism, "transitions": transitions,
                 "wall_seconds": round(wall_seconds, 6),
-                "transitions_per_second": transitions / wall_seconds}
+                "transitions_per_second": transitions / wall_seconds,
+                "execution": "SubprocVecEnv-spawn"}
     finally:
-        for environment in environments:
-            environment.close()
+        environment.close()
 
 
 def _run_ppo(PPO: Any, Monitor: Any, gym: Any, config: dict[str, Any], run_dir: Path,
