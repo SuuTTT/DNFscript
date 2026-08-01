@@ -9,15 +9,15 @@ CONFIG_PATH = Path(__file__).parents[1] / "experiments/configs/ppo_cnn_smallroom
 
 
 class PpoCnnConfigTests(unittest.TestCase):
-    def test_scalar_ppo_action_is_made_iterable_for_craftium(self):
+    def test_scalar_ppo_action_is_made_a_craftium_discrete_action(self):
         class ScalarAction:
             ndim = 0
 
             def item(self):
                 return 2
 
-        self.assertEqual(normalize_craftium_action(ScalarAction()), [2])
-        self.assertEqual(normalize_craftium_action(3), [3])
+        self.assertEqual(normalize_craftium_action(ScalarAction()), 2)
+        self.assertEqual(normalize_craftium_action(3), 3)
         self.assertEqual(normalize_craftium_action([1, 2]), [1, 2])
 
     def test_frozen_development_config_is_valid(self):

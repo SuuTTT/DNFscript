@@ -56,16 +56,15 @@ def _versions() -> dict[str, str]:
 
 
 def normalize_craftium_action(action: Any) -> Any:
-    """Preserve vector actions while making a scalar PPO prediction iterable.
+    """Convert a one-element PPO prediction to Craftium's scalar Discrete action.
 
-    Craftium's ``DiscreteActionWrapper`` iterates over the passed action, while
-    Stable-Baselines3 returns a scalar/zero-dimensional ndarray for a single
-    non-vectorized environment.
+    Craftium's ``DiscreteActionWrapper`` accepts a scalar for one environment,
+    while Stable-Baselines3 returns a zero-dimensional NumPy array in this path.
     """
-    if getattr(action, "ndim", None) == 0:
-        return [action.item() if hasattr(action, "item") else int(action)]
+    if (getattr(action, "size", None) == 1 or getattr(action, "ndim", None) == 0) and hasattr(action, "item"):
+        return int(action.item())
     if isinstance(action, int):
-        return [action]
+        return action
     return action
 
 
