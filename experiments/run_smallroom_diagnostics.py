@@ -306,13 +306,20 @@ def run(config: dict[str, Any], output_dir: Path) -> dict[str, Any]:
     deadline_monotonic = time.monotonic() + config["max_wall_seconds"]
 
     throughput: list[dict[str, Any]] = []
+    parallel_failure_seen = False
     for amount in config["throughput_parallelism"]:
+        if amount > 1 and parallel_failure_seen:
+            throughput.append({"status": "skipped", "parallelism": amount,
+                               "reason": "previous parallel Craftium probe failed; safe serial fallback"})
+            continue
         try:
             throughput.append({"status": "complete", **throughput_probe(gym, config, amount)})
         except Exception as error:
             throughput.append({"status": "failed", "parallelism": amount, "error": repr(error)})
             _append_jsonl(event_log, {"event": "throughput_probe_failed", "parallelism": amount,
                                       "error": repr(error)})
+            if amount > 1:
+                parallel_failure_seen = True
     _write_json(output_dir / "throughput.json", {"samples": throughput})
     selected_parallelism = choose_parallelism(throughput)
     random = random_control(gym, config)
