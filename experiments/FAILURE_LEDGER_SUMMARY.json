@@ -1,5 +1,5 @@
 {
-  "status": "pre-experiment",
-  "records": 0,
-  "note": "No development or held-out episodes have been run under the QuestPilot-Safe protocol. Add one typed evaluator-emitted record per atomic development failure only."
+  "status": "development-pilot-only",
+  "records": 2,
+  "note": "Two Craftium action-interface failures occurred after development-only PPO training and were recovered with explicit tests. No held-out episodes were run; neither failure caused an unsafe action."
 }

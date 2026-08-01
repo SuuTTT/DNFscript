@@ -1,1 +1,1 @@
-
+{"kind":"development_pilot","date":"2026-08-02","environment":"Craftium/SmallRoom-v0","training_model_commit":"57861173802e460b7f25e02f6a3803d8fc1e3482","evaluation_commit":"f852a3dd3b60a8cefbc2c2448a9c87817f6d57af","device":"cpu","training_steps_collected":10240,"evaluation_seeds":[10,11,12,13,14],"mean_return":-500.0,"completion":0.0,"terminated_episodes":0,"truncated_episodes":5,"heldout_seeds_inspected":false,"claim_status":"negative_development_pilot_not_confirmatory"}
