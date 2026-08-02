@@ -1,5 +1,5 @@
 {
   "status": "development-pilot-only",
-  "records": 2,
-  "note": "Two Craftium action-interface failures occurred after development-only PPO training and were recovered with explicit tests. No held-out episodes were run; neither failure caused an unsafe action."
+  "records": 6,
+  "note": "Two Craftium action-interface failures and four bounded setup/runtime failures were recorded during development-only diagnostics. The valid v4 run used a serial Xvfb Craftium fallback, stopped after its 10k result was below random, and never touched held-out seeds or performed an unsafe action."
 }
