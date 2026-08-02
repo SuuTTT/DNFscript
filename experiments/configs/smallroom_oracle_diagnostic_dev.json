@@ -1,0 +1,44 @@
+{
+  "run_id": "smallroom-oracle-diagnostic-dev-v1",
+  "phase": "development",
+  "benchmark_role": "non_deployable_oracle_lower_bound",
+  "environment": "Craftium/SmallRoom-v0",
+  "craftium_commit": "8eb8707cb756df47e76131a0058ab724d2383c76",
+  "observation": "documented local voxel-grid target offset plus player yaw; diagnostic only, never a mobile-game adapter",
+  "environment_kwargs": {
+    "offscreen_sdl": false,
+    "enable_voxel_obs": true,
+    "voxel_obs_rx": 12,
+    "voxel_obs_ry": 2,
+    "voxel_obs_rz": 12
+  },
+  "target_node_id": 118,
+  "action_vocabulary": ["nop", "forward", "mouse x+", "mouse x-"],
+  "train_seed": 0,
+  "evaluation_seeds": [10, 11, 12, 13, 14],
+  "max_episode_steps": 500,
+  "train_timesteps": 10000,
+  "checkpoint_interval": 5000,
+  "progress_shaping_scale": 4.0,
+  "max_wall_seconds": 7200,
+  "minimum_free_disk_gib": 4,
+  "ppo": {
+    "learning_rate": 0.00025,
+    "n_steps": 256,
+    "batch_size": 64,
+    "n_epochs": 4,
+    "gamma": 0.99,
+    "gae_lambda": 0.95,
+    "clip_range": 0.1,
+    "ent_coef": 0.01
+  },
+  "safety": {
+    "heldout_seeds_forbidden": true,
+    "commercial_games_forbidden": true,
+    "networked_players_forbidden": true,
+    "new_rental_forbidden": true,
+    "instance_lifecycle_forbidden": true,
+    "output_sync_required": true,
+    "oracle_not_for_deployment": true
+  }
+}

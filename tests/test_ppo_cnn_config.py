@@ -3,6 +3,7 @@ import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
+
 from experiments.ppo_cnn_smallroom import REQUIRED_ACTIONS, load_config, normalize_craftium_action, validate_config
 from experiments.run_smallroom_diagnostics import (
     choose_device,
@@ -10,10 +11,12 @@ from experiments.run_smallroom_diagnostics import (
     validate_config as validate_diagnostics_config,
 )
 from experiments.stop_on_negative import should_stop
+from experiments.run_smallroom_oracle_diagnostic import validate_config as validate_oracle_config
 
 
 CONFIG_PATH = Path(__file__).parents[1] / "experiments/configs/ppo_cnn_smallroom_dev.json"
 DIAGNOSTIC_CONFIG_PATH = Path(__file__).parents[1] / "experiments/configs/smallroom_diagnostics_dev.json"
+ORACLE_CONFIG_PATH = Path(__file__).parents[1] / "experiments/configs/smallroom_oracle_diagnostic_dev.json"
 
 
 class PpoCnnConfigTests(unittest.TestCase):
@@ -99,3 +102,12 @@ class PpoCnnConfigTests(unittest.TestCase):
                 '{"runs": [{"budget": 10000, "mean_return": -500.0}]}', encoding="utf-8"
             )
             self.assertTrue(should_stop(run_dir))
+
+    def test_oracle_diagnostic_is_explicitly_non_deployable_and_development_only(self):
+        config = json.loads(ORACLE_CONFIG_PATH.read_text(encoding="utf-8"))
+        validate_oracle_config(config)
+        self.assertTrue(config["safety"]["oracle_not_for_deployment"])
+        invalid = dict(config)
+        invalid["phase"] = "heldout"
+        with self.assertRaises(ValueError):
+            validate_oracle_config(invalid)
