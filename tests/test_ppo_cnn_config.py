@@ -1,6 +1,7 @@
 import json
 import unittest
 from pathlib import Path
+from tempfile import TemporaryDirectory
 
 from experiments.ppo_cnn_smallroom import REQUIRED_ACTIONS, load_config, normalize_craftium_action, validate_config
 from experiments.run_smallroom_diagnostics import (
@@ -8,6 +9,7 @@ from experiments.run_smallroom_diagnostics import (
     choose_parallelism,
     validate_config as validate_diagnostics_config,
 )
+from experiments.stop_on_negative import should_stop
 
 
 CONFIG_PATH = Path(__file__).parents[1] / "experiments/configs/ppo_cnn_smallroom_dev.json"
@@ -87,3 +89,13 @@ class PpoCnnConfigTests(unittest.TestCase):
         ]
         self.assertEqual(choose_parallelism(samples), 4)
         self.assertEqual(choose_parallelism([]), 1)
+
+    def test_negative_10k_control_can_trigger_only_after_result_exists(self):
+        with TemporaryDirectory() as temporary:
+            run_dir = Path(temporary)
+            self.assertFalse(should_stop(run_dir))
+            (run_dir / "random_control.json").write_text('{"mean_return": -300.0}', encoding="utf-8")
+            (run_dir / "progress.json").write_text(
+                '{"runs": [{"budget": 10000, "mean_return": -500.0}]}', encoding="utf-8"
+            )
+            self.assertTrue(should_stop(run_dir))
