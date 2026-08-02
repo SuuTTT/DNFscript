@@ -107,6 +107,7 @@ class PpoCnnConfigTests(unittest.TestCase):
         config = json.loads(ORACLE_CONFIG_PATH.read_text(encoding="utf-8"))
         validate_oracle_config(config)
         self.assertTrue(config["safety"]["oracle_not_for_deployment"])
+        self.assertIn("random-control policy is replayable", (Path(__file__).parents[1] / "experiments/run_smallroom_oracle_diagnostic.py").read_text(encoding="utf-8"))
         invalid = dict(config)
         invalid["phase"] = "heldout"
         with self.assertRaises(ValueError):

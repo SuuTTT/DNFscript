@@ -117,6 +117,9 @@ def rollout(model: Any | None, config: dict[str, Any], random_policy: bool) -> l
         environment = make_oracle_environment(config, shaped=False)
         try:
             state, _info = environment.reset(seed=seed)
+            # Gym's action-space RNG is independent of Env.reset(seed=...).
+            # Seed it explicitly so the fixed random-control policy is replayable.
+            environment.action_space.seed(seed)
             reward_sum, steps, terminated, truncated = 0.0, 0, False, False
             while steps < config["max_episode_steps"] and not (terminated or truncated):
                 action = environment.action_space.sample() if random_policy else model.predict(state, deterministic=True)[0]
