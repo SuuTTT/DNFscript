@@ -88,3 +88,10 @@ class QuestPilotTests(unittest.TestCase):
         switch = UiKillSwitch(); switch.trigger()
         result = QuestPilotUiAgent().run(OfflineUiSimulator(), UiTask.CLAIM_REWARD, kill_switch=switch)
         self.assertEqual(result.actions, [])
+    def test_playable_product_demo_keeps_offline_and_safety_controls_visible(self):
+        demo = (Path(__file__).parents[1] / "demo/questpilot-ui-demo.html").read_text(encoding="utf-8")
+        self.assertIn("Offline UI Playground", demo)
+        self.assertIn("Run agent step", demo)
+        self.assertIn("Hard kill switch", demo)
+        self.assertIn("offline upgrade requires two explicit gates", demo)
+        self.assertNotIn("fetch(", demo)

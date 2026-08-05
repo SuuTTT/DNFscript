@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>QuestPilot — Offline UI Playground</title>
+  <style>
+    :root { color-scheme: dark; --bg:#0c1020; --panel:#141b32; --line:#293452; --text:#edf2ff; --muted:#a7b2ce; --accent:#63d6b2; --warn:#f7bd5c; --danger:#f18383; }
+    * { box-sizing:border-box } body { margin:0; font:15px/1.45 ui-sans-serif,system-ui,sans-serif; background:linear-gradient(135deg,#0a0e1b,#151b35); color:var(--text) }
+    main { max-width:1180px; margin:auto; padding:26px 18px 40px } h1,h2,p { margin-top:0 } h1 { font-size:28px; margin-bottom:6px } .subtitle { color:var(--muted); max-width:850px }
+    .notice { border:1px solid #4a4460; background:#1c1d32; color:#d8d4eb; padding:12px 14px; border-radius:10px; margin:20px 0 }
+    .grid { display:grid; grid-template-columns:1.08fr .92fr; gap:18px } .card { border:1px solid var(--line); background:rgba(20,27,50,.92); border-radius:14px; padding:17px; box-shadow:0 10px 35px #0003 }
+    label { display:block; color:var(--muted); font-size:13px; margin-bottom:5px } select,button { font:inherit; border-radius:8px; padding:9px 10px; border:1px solid var(--line); background:#202a49; color:var(--text) } select { width:100%; margin-bottom:12px }
+    button { cursor:pointer; margin:4px 5px 4px 0 } button:hover:not(:disabled) { border-color:var(--accent) } button:disabled { opacity:.45; cursor:not-allowed } .primary { background:#267a66; border-color:#52b89e } .danger { background:#713d4b; border-color:#b46e7b }
+    .screen { min-height:340px; padding:22px; border-radius:12px; background:radial-gradient(circle at 20% 0,#34416f,#11172b 70%); border:1px solid #4a598b; position:relative; overflow:hidden }
+    .brand { letter-spacing:2px; color:var(--accent); font-weight:800; font-size:12px }.screen h2 { margin:18px 0 6px }.screen p { color:#ccd6ee }.pill { display:inline-block; margin:5px 5px 0 0; padding:4px 8px; border-radius:999px; background:#202c4f; color:#bfcdf0; font-size:12px }
+    .reward { margin-top:20px; padding:14px; border-radius:10px; background:#252846; border:1px solid #69618d }.upgrade { border-color:#7970c7; background:#242343 }.cost { color:var(--warn); font-weight:700 }.dangerText { color:var(--danger) }.actions { margin-top:15px; border-top:1px solid var(--line); padding-top:12px }
+    .status { display:flex; align-items:center; gap:8px; margin:9px 0 14px; color:var(--muted) }.dot { width:10px; height:10px; background:var(--accent); border-radius:50% }.stop .dot { background:var(--danger) }.state { color:var(--accent); font-family:ui-monospace,SFMono-Regular,Menlo,monospace }
+    .toggle { display:flex; align-items:center; gap:8px; margin:9px 0; color:var(--muted) }.toggle input { accent-color:var(--accent) }.audit { max-height:355px; overflow:auto; padding:9px; border-radius:9px; background:#0c1120; border:1px solid var(--line); font:12px/1.45 ui-monospace,SFMono-Regular,Menlo,monospace }.event { border-bottom:1px solid #1e2945; padding:7px 4px }.event:last-child{border:0}.event b{color:#86b7ff}.event.safe b{color:var(--danger)} .event.complete b{color:var(--accent)}
+    .legend { display:flex; flex-wrap:wrap; gap:7px; margin:10px 0 }.legend span { font-size:12px; padding:3px 7px; border:1px solid var(--line); border-radius:6px; color:var(--muted)} @media(max-width:800px){.grid{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+<main>
+  <h1>QuestPilot Offline UI Playground</h1>
+  <p class="subtitle">A local, deterministic demonstration of screen-state reading, safe UI workflows, and audit playback. It never connects to a game, account, API, or device.</p>
+  <div class="notice"><strong>Safety boundary:</strong> this is an in-browser mock. “Run agent” only changes this page’s local state. Character upgrades are recommendations unless both offline execution and approval are explicitly enabled.</div>
+  <div class="grid">
+    <section class="card">
+      <label for="task">Task</label><select id="task"><option value="quest">Quest → collect → reward</option><option value="reward">Claim reward only</option><option value="recommend">Recommend character upgrade</option><option value="upgrade">Apply offline upgrade (two gates required)</option></select>
+      <label for="perturb">Screen condition</label><select id="perturb"><option value="none">Normal</option><option value="noise">Decorative noise</option><option value="unreadable">Unreadable screen</option><option value="conflict">Conflicting labels</option><option value="low">Low confidence OCR</option><option value="faint">Faint action label</option></select>
+      <div class="toggle"><input id="allowUpgrade" type="checkbox"><label for="allowUpgrade">Enable offline upgrade execution</label></div>
+      <div class="toggle"><input id="approveUpgrade" type="checkbox"><label for="approveUpgrade">Human approves this offline upgrade</label></div>
+      <div><button id="reset">Reset demo</button><button id="agentStep" class="primary">Run agent step</button><button id="agentRun">Run until stop</button><button id="kill" class="danger">Hard kill switch</button></div>
+      <div id="status" class="status"><i class="dot"></i><span>Ready — dry run only</span></div>
+      <div id="screen" class="screen"></div>
+      <div class="actions"><strong>Manual play</strong><div id="manualActions"></div></div>
+    </section>
+    <aside class="card">
+      <h2>Agent decision trace</h2>
+      <p class="subtitle">Every observation, state estimate, behavior-tree leaf, action, approval request, and stop is shown here.</p>
+      <div class="legend"><span>dry-run</span><span>allowlisted</span><span>confidence ≥ 0.95</span><span>max 12 actions</span></div>
+      <div id="audit" class="audit" aria-live="polite"></div>
+    </aside>
+  </div>
+</main>
+<script>
+(() => {
+  const states = {
+    login:{markers:['LOGIN'],title:'Welcome back',body:'Sign in to open the offline home screen.',buttons:[['login','Login']]},
+    home:{markers:['HOME','QUESTS','REWARDS','CHARACTER'],title:'Home',body:'Daily activities are available in this offline demo.',buttons:[['open_quests','Quests'],['open_rewards','Rewards'],['open_character','Character']]},
+    quest_list:{markers:['QUEST_LIST','DAILY_RELIC'],title:'Quest list',body:'Daily Relic — collect the marked relic.',buttons:[['select_quest','Open Daily Relic']]},
+    quest_detail:{markers:['QUEST_DETAIL','DAILY_RELIC','OBJECTIVE_COLLECT'],title:'Daily Relic',body:'Objective: collect the relic, then return for a reward.',buttons:[['track_quest','Track quest']]},
+    quest_ready:{markers:['QUEST_READY','COLLECT_AVAILABLE'],title:'Quest complete',body:'The relic is ready to collect.',buttons:[['collect_quest','Collect relic']]},
+    rewards:{markers:['REWARDS','REWARD_READY'],title:'Rewards',body:'One daily reward is ready.',buttons:[['claim_reward','Claim reward']]},
+    character:{markers:['CHARACTER','LEVEL_10','TOKEN_120'],title:'Character',body:'Level 10 · 120 soft tokens available.',buttons:[['inspect_upgrade','Inspect upgrade']]},
+    upgrade_recommendation:{markers:['UPGRADE_RECOMMENDATION','POWER_PLUS_5','COST_100_TOKEN'],title:'Upgrade recommendation',body:'Recommended: +5 power for 100 soft tokens.',buttons:[['open_upgrade_confirmation','Review offline upgrade']]},
+    upgrade_confirmation:{markers:['UPGRADE_CONFIRMATION','COST_100_TOKEN','CONFIRM'],title:'Confirm offline upgrade',body:'This consumes 100 simulated soft tokens only.',buttons:[['apply_upgrade','Apply offline upgrade']]},
+    complete:{markers:['COMPLETE','ALL_CLAIMED'],title:'Complete',body:'The offline workflow is complete.',buttons:[]}
+  };
+  const transition = {login:{login:'home'},home:{open_quests:'quest_list',open_rewards:'rewards',open_character:'character'},quest_list:{select_quest:'quest_detail'},quest_detail:{track_quest:'quest_ready'},quest_ready:{collect_quest:'home'},rewards:{claim_reward:'complete'},character:{inspect_upgrade:'upgrade_recommendation'},upgrade_recommendation:{open_upgrade_confirmation:'upgrade_confirmation'},upgrade_confirmation:{apply_upgrade:'complete'}};
+  const labels = {login:'Login',open_quests:'Open quests',select_quest:'Select quest',track_quest:'Read & track quest',collect_quest:'Collect quest',open_rewards:'Open rewards',claim_reward:'Claim reward',open_character:'Open character',inspect_upgrade:'Inspect upgrade',open_upgrade_confirmation:'Review upgrade',apply_upgrade:'Apply upgrade'};
+  let state='login', actions=0, questCollected=false, killed=false, audit=[];
+  const el=id=>document.getElementById(id), event=(kind,payload={})=>{audit.push({kind,...payload}); renderAudit()};
+  const reset=()=>{state='login';actions=0;questCollected=false;killed=false;audit=[];event('reset',{state});render()};
+  const condition=()=>el('perturb').value;
+  const observation=()=>{let c=condition();let s=states[state];let markers=[...s.markers];let confidence=0.99;if(c==='unreadable')markers=['BLURRED'];if(c==='conflict')markers.push('LOGIN','REWARDS');if(c==='low')confidence=.44;if(c==='faint')confidence=.93;return {markers,confidence,hash:btoa(state+'|'+c).slice(0,14),condition:c}};
+  const resolve=o=>{let matches=Object.entries(states).filter(([_,v])=>v.markers.every(x=>o.markers.includes(x))).map(([k])=>k);if(matches.length!==1)return {state:'unknown',confidence:0,reason:'no unique UI marker set'};if(o.confidence<.90)return {state:'unknown',confidence:o.confidence,reason:'OCR confidence below UI state threshold'};return {state:matches[0],confidence:o.confidence,reason:'unique UI marker set'}};
+  const desired=()=>{if(state==='login')return ['login','login'];let task=el('task').value;if(task==='quest'){if(state==='home')return questCollected?['open_rewards','open_rewards']:['open_quests','open_quests'];if(state==='quest_list')return ['select_quest','select_quest'];if(state==='quest_detail')return ['read_and_track_quest','track_quest'];if(state==='quest_ready')return ['collect_quest','collect_quest'];if(state==='rewards')return ['claim_reward','claim_reward'];if(state==='complete')return ['complete',null]}if(task==='reward'){if(state==='home')return ['open_rewards','open_rewards'];if(state==='rewards')return ['claim_reward','claim_reward'];if(state==='complete')return ['complete',null]}if(task==='recommend'){if(state==='home')return ['open_character','open_character'];if(state==='character')return ['inspect_upgrade','inspect_upgrade'];if(state==='upgrade_recommendation')return ['recommend_upgrade',null]}if(task==='upgrade'){if(state==='home')return ['open_character','open_character'];if(state==='character')return ['inspect_upgrade','inspect_upgrade'];if(state==='upgrade_recommendation')return ['review_upgrade','open_upgrade_confirmation'];if(state==='upgrade_confirmation')return ['apply_upgrade','apply_upgrade'];if(state==='complete')return ['complete',null]}return ['safe_stop',null]};
+  const apply=action=>{if(action==='apply_upgrade'&&(!el('allowUpgrade').checked||!el('approveUpgrade').checked)){event('approval_required',{reason:'offline upgrade requires two explicit gates',action});stop('upgrade approval required');return false}let next=transition[state]?.[action];if(!next){event('safe_stop',{reason:'offline UI rejected action',action});stop('offline UI rejected action');return false}event('action',{state,action,mode:'dry_run',applied:true});actions++;questCollected ||= action==='collect_quest';state=next;render();return true};
+  const stop=reason=>{killed=true;event('safe_stop',{reason});render()};
+  const step=()=>{if(killed)return; if(actions>=12){stop('action limit reached');return}let o=observation(),e=resolve(o);event('ui_observation',{hash:o.hash,markers:o.markers.join(' '),confidence:e.confidence.toFixed(2),state:e.state,reason:e.reason});if(e.state==='unknown'){event('approval_required',{reason:e.reason});stop('uncertain UI state');return}let [leaf,action]=desired();event('behavior_tree',{leaf,state,action:action||'none'});if(!action){if(leaf==='recommend_upgrade'){event('recommendation',{upgrade:'+5 power',cost:'100 soft tokens'});killed=true}else if(leaf==='complete'){event('complete',{state});killed=true}else stop('workflow has no safe action');render();return}if(e.confidence<.95){event('approval_required',{reason:'action confidence below threshold',action});stop('uncertain UI action');return}apply(action)};
+  const run=()=>{let i=0;while(!killed&&i++<13)step()};
+  const manual=action=>{if(killed)return;event('manual_action',{state,action,mode:'offline manual'});apply(action)};
+  const renderAudit=()=>{el('audit').innerHTML=audit.map((x,i)=>`<div class="event ${x.kind==='safe_stop'?'safe':x.kind==='complete'?'complete':''}"><b>${String(i+1).padStart(2,'0')} ${x.kind}</b> ${Object.entries(x).filter(([k])=>k!=='kind').map(([k,v])=>`${k}=${v}`).join(' · ')}</div>`).join('');el('audit').scrollTop=el('audit').scrollHeight};
+  const render=()=>{let s=states[state],c=condition();let content=`<div class="brand">QUESTPILOT_UI · OFFLINE</div><h2>${s.title}</h2><p>${s.body}</p><div>${s.markers.map(m=>`<span class="pill">${m}</span>`).join('')}</div>`;if(state.includes('upgrade'))content+=`<div class="reward upgrade"><strong>Recommendation only</strong><br><span class="cost">100 soft tokens</span> · No real currency or external account.</div>`;if(c!=='none')content+=`<div class="reward"><span class="dangerText">Screen condition: ${c}</span></div>`;el('screen').innerHTML=content;el('manualActions').innerHTML=s.buttons.map(([a,l])=>`<button ${killed?'disabled':''} data-action="${a}">${l}</button>`).join('')||'<span class="subtitle">No manual action available.</span>';document.querySelectorAll('[data-action]').forEach(b=>b.onclick=()=>manual(b.dataset.action));let status=el('status');status.className='status'+(killed?' stop':'');status.innerHTML=`<i class="dot"></i><span>${killed?'Stopped / complete':'Ready'} · state <b class="state">${state}</b> · actions ${actions}/12</span>`;el('agentStep').disabled=killed;el('agentRun').disabled=killed};
+  el('reset').onclick=reset;el('agentStep').onclick=step;el('agentRun').onclick=run;el('kill').onclick=()=>{if(!killed)stop('hard kill switch engaged')};el('task').onchange=reset;el('perturb').onchange=reset;reset();
+})();
+</script>
+</body>
+</html>
