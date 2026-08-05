@@ -8,6 +8,11 @@ Date: 2026-08-06 (Asia/Singapore)
 offline QuestPilot UI simulator. It has no dependencies, network calls, game
 client, credentials, or external service.
 
+The mock uses an original fantasy-game presentation—a HUD, character and
+resources, quest card, map scene, bottom navigation, and contextual in-world
+action buttons—so a human can play the UI while seeing the same screen state
+that the agent reads. It does not copy or connect to a commercial game's UI.
+
 Launch from the repository root:
 
 ```bash
