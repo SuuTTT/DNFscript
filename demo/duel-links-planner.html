@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>QuestPilot — Local Manual Planner</title>
+  <style>
+    :root{--ink:#202633;--muted:#687083;--paper:#f7f8fb;--card:#fff;--line:#dce1ea;--blue:#245f9c;--green:#20724d;--amber:#9b6512;--red:#a33b42}
+    *{box-sizing:border-box}body{margin:0;background:var(--paper);font:15px/1.45 system-ui,-apple-system,Segoe UI,sans-serif;color:var(--ink)}
+    main{max-width:1050px;margin:auto;padding:30px 20px 70px}.eyebrow{color:var(--blue);font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}h1{margin:3px 0 7px;font:700 34px/1.08 Georgia,serif}.lead{max-width:720px;margin:0;color:var(--muted)}
+    .notice{margin:21px 0;padding:12px 14px;border-left:4px solid var(--amber);background:#fff9ec;border-radius:7px;color:#614815}.grid{display:grid;grid-template-columns:1.2fr .8fr;gap:16px}.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px;box-shadow:0 1px 2px #17203008}.card h2{margin:0 0 5px;font-size:17px}.sub{color:var(--muted);font-size:13px;margin:0 0 14px}
+    .tasks{display:grid;gap:10px}.task{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;border:1px solid var(--line);border-radius:9px;padding:11px}.task.done{background:#f1f8f4;border-color:#b9dbc8}.task h3{font-size:15px;margin:0 0 3px}.task p{margin:0;color:var(--muted);font-size:12px}.tags{display:flex;gap:5px;flex-wrap:wrap;margin-top:7px}.tag{font-size:10px;font-weight:750;padding:2px 6px;border-radius:10px;background:#edf2f8;color:#496174}.tag.weekly{background:#f5efe2;color:#8b5e14}.task button,button{border:0;border-radius:7px;padding:8px 10px;background:var(--blue);color:#fff;font-weight:700;cursor:pointer}.task button:disabled,button:disabled{background:#a7afbd;cursor:not-allowed}.task button.secondary,button.secondary{color:var(--blue);background:#e9f0f7}.task button.stop,button.stop{background:var(--red)}
+    .summary{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0}.metric{background:#f4f6fa;border:1px solid var(--line);border-radius:8px;padding:9px}.metric b,.metric span{display:block}.metric b{font-size:22px}.metric span{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+    .order{list-style:none;margin:0;padding:0;display:grid;gap:7px}.order li{display:grid;grid-template-columns:24px 1fr auto;gap:8px;align-items:center;padding:8px;border:1px solid var(--line);border-radius:7px}.order b{display:grid;place-items:center;width:23px;height:23px;border-radius:50%;background:#e8f0f9;color:var(--blue);font-size:12px}.order small{color:var(--muted)}
+    form{display:grid;grid-template-columns:1fr 105px 85px auto;gap:7px;margin-top:12px}input,select{min-width:0;padding:8px;border:1px solid var(--line);border-radius:7px;background:#fff;color:var(--ink);font:inherit}.small-note{font-size:11px;color:var(--muted)}.safety{display:flex;gap:7px;flex-wrap:wrap;margin-top:14px}.status{margin-top:11px;border-radius:7px;padding:9px;background:#eef4fa;color:#31536c;font-size:13px}.status.stop{background:#fff0f1;color:#873139}
+    details{margin-top:14px;border-top:1px solid var(--line);padding-top:12px}summary{cursor:pointer;font-weight:700}.audit{max-height:210px;overflow:auto;margin:9px 0 0;padding:0;list-style:none;font:11px/1.45 ui-monospace,SFMono-Regular,Menlo,monospace}.audit li{padding:5px 0;border-bottom:1px solid #edf0f5}.sim-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:7px}.sim-grid button{font-size:12px}.sim-result{white-space:pre-wrap;margin-top:10px;padding:10px;background:#111c28;color:#d8e8f7;border-radius:7px;font:11px/1.45 ui-monospace,SFMono-Regular,Menlo,monospace}
+    footer{margin-top:20px;color:var(--muted);font-size:12px}@media(max-width:760px){.grid{grid-template-columns:1fr}form{grid-template-columns:1fr 1fr}.task{grid-template-columns:1fr}.task button{width:100%}}
+  </style>
+</head>
+<body>
+<main>
+  <div class="eyebrow">QuestPilot · personal planner · phase 1</div>
+  <h1>Duel Links daily planner</h1>
+  <p class="lead">A private checklist for tasks you enter and complete yourself. Your plan, confirmations, notes, and audit log stay in this browser’s local storage.</p>
+  <div class="notice"><b>Manual-only boundary.</b> This page never logs in, reads a game client, sends input, or contacts a network service. A completion is recorded only after you press <em>Confirm manually</em>.</div>
+
+  <div class="grid">
+    <section class="card">
+      <h2>Today’s manually entered checklist</h2>
+      <p class="sub">Starter items use original wording. Edit or add your own chores and verify your own reset time.</p>
+      <div class="summary" id="summary"></div>
+      <div class="tasks" id="tasks"></div>
+      <form id="add-task">
+        <input id="new-title" maxlength="80" required placeholder="Add a personal chore">
+        <input id="new-minutes" type="number" min="1" max="180" value="5" aria-label="Minutes">
+        <select id="new-cadence" aria-label="Cadence"><option value="daily">Daily</option><option value="weekly">Weekly</option></select>
+        <button type="submit">Add locally</button>
+      </form>
+      <p class="small-note">Reset time: <input id="reset-time" type="time" value="00:00"> interpreted in this browser’s local time. This is a user setting, not a verified publisher schedule.</p>
+    </section>
+
+    <aside class="card">
+      <h2>Shortest order</h2>
+      <p class="sub">A deterministic recommendation using only your local estimated minutes.</p>
+      <ol class="order" id="order"></ol>
+      <div class="status" id="status" role="status"></div>
+      <div class="safety">
+        <button class="stop" id="hard-stop">Hard stop</button>
+        <button class="secondary" id="resume">Resume local planner</button>
+        <button class="secondary" id="reset-data">Restore starter data</button>
+      </div>
+      <details open><summary>Offline synthetic workflow simulator</summary>
+        <p class="small-note">A deterministic test model. It does not use a game client or alter your checklist.</p>
+        <div class="sim-grid">
+          <button class="secondary" data-sim="normal">Manual confirmation path</button>
+          <button class="secondary" data-sim="conflict">Conflicting state</button>
+          <button class="secondary" data-sim="low">Low confidence</button>
+          <button class="secondary" data-sim="stop">Hard-stop probe</button>
+        </div>
+        <div class="sim-result" id="sim-result">Select a synthetic scenario.</div>
+      </details>
+      <details><summary>Local audit log</summary><ul class="audit" id="audit"></ul></details>
+    </aside>
+  </div>
+  <footer>Serve this private demo only on <code>http://127.0.0.1</code>. Future real-game adapters are disabled. They require dated official API authorization or written publisher permission stored in the repository, followed by separate review.</footer>
+</main>
+<script>
+(() => {
+  'use strict';
+  const KEY = 'questpilot-duel-links-manual-planner-v1';
+  const starter = () => ({resetTime:'00:00', hardStop:false, audit:[], tasks:[
+    {id:'daily-reward-review', title:'Manually review today’s reward queue', cadence:'daily', minutes:2, reward:'Write the reward you observed yourself.', streak:0, completedPeriod:null},
+    {id:'daily-mission-plan', title:'Choose one manual daily mission', cadence:'daily', minutes:5, reward:'Optional personal progress note.', streak:0, completedPeriod:null},
+    {id:'weekly-review', title:'Review the weekly personal checklist', cadence:'weekly', minutes:8, reward:'Optional weekly goal note.', streak:0, completedPeriod:null}
+  ]});
+  let state;
+  try { state = JSON.parse(localStorage.getItem(KEY)) || starter(); } catch (_) { state = starter(); }
+  const $ = id => document.getElementById(id);
+  const stamp = () => new Date().toISOString();
+  const audit = (kind, detail) => { state.audit.unshift({at:stamp(), kind, detail}); state.audit = state.audit.slice(0,80); };
+  const save = () => localStorage.setItem(KEY, JSON.stringify(state));
+  const period = task => {
+    const now = new Date(), [hour, minute] = state.resetTime.split(':').map(Number), base = new Date(now);
+    base.setHours(hour, minute, 0, 0); if (now < base) base.setDate(base.getDate()-1);
+    if (task.cadence === 'daily') return `daily:${base.toISOString().slice(0,10)}`;
+    const monday = new Date(base); monday.setDate(base.getDate() - ((base.getDay()+6)%7));
+    return `weekly:${monday.toISOString().slice(0,10)}`;
+  };
+  const validate = () => {
+    if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(state.resetTime)) return 'invalid reset time';
+    const ids = new Set();
+    for (const task of state.tasks) {
+      if (!task.id || ids.has(task.id)) return 'conflicting task IDs'; ids.add(task.id);
+      if (!task.title.trim() || !Number.isFinite(task.minutes) || task.minutes < 1) return `invalid manual task: ${task.id || 'missing id'}`;
+      if (!['daily','weekly'].includes(task.cadence) || (task.completedPeriod && !task.completedPeriod.startsWith(task.cadence+':'))) return `conflicting completion state: ${task.id}`;
+    }
+    return '';
+  };
+  const decision = () => {
+    if (state.hardStop) return {stop:true, reason:'hard stop engaged'};
+    const conflict = validate(); if (conflict) return {stop:true, reason:conflict};
+    return {stop:false, reason:'confidence 0.99 · shortest manually entered order', tasks:state.tasks.filter(task => task.completedPeriod !== period(task)).sort((a,b)=>a.minutes-b.minutes || a.title.localeCompare(b.title))};
+  };
+  const render = () => {
+    const plan = decision(), pending = state.tasks.filter(t => t.completedPeriod !== period(t));
+    $('reset-time').value = state.resetTime;
+    $('summary').innerHTML = `<div class="metric"><b>${pending.length}</b><span>unfinished</span></div><div class="metric"><b>${state.tasks.length-pending.length}</b><span>confirmed</span></div><div class="metric"><b>${pending.reduce((sum,t)=>sum+t.minutes,0)}</b><span>minutes left</span></div>`;
+    $('tasks').innerHTML = state.tasks.map(task => {
+      const done = task.completedPeriod === period(task);
+      return `<article class="task ${done?'done':''}"><div><h3>${escapeHtml(task.title)}</h3><p>${escapeHtml(task.reward || 'No local reward note.')}</p><div class="tags"><span class="tag ${task.cadence==='weekly'?'weekly':''}">${task.cadence}</span><span class="tag">${task.minutes} min</span><span class="tag">streak ${task.streak}</span>${done?'<span class="tag">confirmed</span>':''}</div></div><button data-confirm="${task.id}" ${done||plan.stop?'disabled':''}>${done?'Confirmed':'Confirm manually'}</button></article>`;
+    }).join('');
+    $('order').innerHTML = plan.stop ? `<li><b>!</b><span>${escapeHtml(plan.reason)}</span><small>safe stop</small></li>` : (plan.tasks.length ? plan.tasks.map((task,index)=>`<li><b>${index+1}</b><span>${escapeHtml(task.title)}</span><small>${task.minutes} min</small></li>`).join('') : '<li><b>✓</b><span>Nothing due in this local period.</span><small>complete</small></li>');
+    $('status').textContent = plan.reason; $('status').className = 'status'+(plan.stop?' stop':'');
+    $('audit').innerHTML = state.audit.map(event => `<li><b>${escapeHtml(event.kind)}</b> · ${escapeHtml(event.detail)}<br><small>${event.at}</small></li>`).join('') || '<li>No local events yet.</li>';
+    save();
+  };
+  const escapeHtml = value => String(value).replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+  document.addEventListener('click', event => {
+    const id = event.target.dataset.confirm; if (!id) return;
+    const plan = decision(), task = state.tasks.find(item => item.id === id);
+    if (plan.stop || !task) { audit('safe_stop', plan.reason || 'unknown task'); render(); return; }
+    if (task.completedPeriod === period(task)) { audit('manual_confirmation_ignored', `${id}: already confirmed`); render(); return; }
+    task.completedPeriod = period(task); task.streak += 1; audit('manual_confirmation', `${id}: human confirmed, streak ${task.streak}`); render();
+  });
+  $('add-task').addEventListener('submit', event => { event.preventDefault(); const title = $('new-title').value.trim(), minutes = Number($('new-minutes').value); if (!title || minutes < 1) return; const id=`manual-${Date.now()}`; state.tasks.push({id,title,cadence:$('new-cadence').value,minutes,reward:'Manually entered local task.',streak:0,completedPeriod:null}); audit('local_task_added', id); $('new-title').value=''; render(); });
+  $('reset-time').addEventListener('change', event => { state.resetTime=event.target.value; audit('reset_time_changed', state.resetTime); render(); });
+  $('hard-stop').addEventListener('click', () => { state.hardStop=true; audit('hard_stop','manual hard stop engaged'); render(); });
+  $('resume').addEventListener('click', () => { state.hardStop=false; audit('local_resume','manual resume after hard stop'); render(); });
+  $('reset-data').addEventListener('click', () => { state=starter(); audit('starter_data_restored','local data replaced by original starter checklist'); render(); });
+  document.querySelectorAll('[data-sim]').forEach(button => button.addEventListener('click', () => {
+    const scenario = button.dataset.sim;
+    const traces = {normal:['observe local checklist -> confidence=0.99','recommend shortest order -> no external action','human presses Confirm manually -> audit record'], conflict:['observe duplicate task ids -> confidence=0.00','safe_stop -> no recommendation or confirmation'], low:['observe incomplete manual data -> confidence=0.44','approval_required -> safe_stop'], stop:['hard stop checked before read -> safe_stop','no task state changed']};
+    $('sim-result').textContent = `synthetic:${scenario}\n${traces[scenario].join('\n')}`;
+  }));
+  audit('planner_loaded','local browser state loaded; no network integration'); render();
+})();
+</script>
+</body>
+</html>

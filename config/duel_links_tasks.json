@@ -1,0 +1,31 @@
+{
+  "schema": "questpilot-duel-links-manual-planner-v1",
+  "notice": "Original, editable starter data only. Verify reset times and chores yourself; this file does not read or connect to Duel Links.",
+  "timezone": "UTC",
+  "tasks": [
+    {
+      "id": "daily-reward-review",
+      "title": "Manually review today’s reward queue",
+      "cadence": "daily",
+      "estimate_minutes": 2,
+      "reset_time": "00:00",
+      "reward_note": "Write the reward you observed yourself."
+    },
+    {
+      "id": "daily-mission-plan",
+      "title": "Choose one manual daily mission",
+      "cadence": "daily",
+      "estimate_minutes": 5,
+      "reset_time": "00:00",
+      "reward_note": "Optional personal progress note."
+    },
+    {
+      "id": "weekly-review",
+      "title": "Review the weekly personal checklist",
+      "cadence": "weekly",
+      "estimate_minutes": 8,
+      "reset_time": "00:00",
+      "reward_note": "Optional weekly goal note."
+    }
+  ]
+}

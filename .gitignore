@@ -6,6 +6,8 @@
 *.gif
 *.bmp
 *.tiff
+!docs/screenshots/
+!docs/screenshots/*.png
 __pycache__/
 *.py[cod]
 .luanti-user/

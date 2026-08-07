@@ -16,6 +16,44 @@ The agent defaults to dry-run; the in-memory mock is the only execution target.
 See `docs/PERMISSION_MATRIX.md` and `docs/BUSINESS_GATE.md` before considering
 any future integration.
 
+## Duel Links personal planner (local manual Phase 1)
+
+`demo/duel-links-planner.html` is an original, local-only checklist UI for
+chores that **you enter and complete yourself**. It keeps its checklist,
+reset-time preference, streaks, reward notes, and audit history in that
+browser's local storage. It never receives a Duel Links login, reads a client,
+uses OCR/capture, sends clicks or keys, or makes a network request.
+
+Run it only on loopback:
+
+```bash
+python3 -m http.server 8081 --bind 127.0.0.1 --directory demo
+```
+
+Open <http://127.0.0.1:8081/duel-links-planner.html>. Press **Confirm
+manually** only after you have done the task yourself. The UI recommends the
+shortest unfinished task order from your own estimates, offers a deterministic
+offline workflow simulator, and exposes a hard stop plus local audit log.
+
+![Local Duel Links manual planner screenshot](docs/screenshots/duel-links-planner-local.png)
+
+The editable starter configuration is
+`config/duel_links_tasks.json`; it uses original text and deliberately labels
+the reset time as a user setting rather than a verified publisher schedule.
+See `docs/DUEL_LINKS_PERMISSION_GATE.md`: live Duel Links automation remains
+blocked. The repository contains no Duel Links adapter; any future proposal
+requires dated official API authorization or written publisher permission
+stored in the repository, then separate review.
+
+Validate the local planner and all preserved QuestPilot safety gates:
+
+```bash
+PYTHONPATH=. python3 -m py_compile questpilot/*.py
+PYTHONPATH=. python3 -m unittest discover -s tests -v
+PYTHONPATH=. python3 -m questpilot.benchmark
+PYTHONPATH=. python3 -m questpilot.product_benchmark
+```
+
 The first publisher-supported extension is a bounded Minecraft Education
 Code Builder Agent script. See `adapters/minecraft_education/README.md` and
 `docs/ADAPTER_ROADMAP.md`; it runs only in an owned/demo Education world and
