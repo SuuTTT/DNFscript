@@ -80,6 +80,22 @@ PYTHONPATH=. python3 -m questpilot.original_mock
 See `docs/ORIGINAL_MOCK_AUTOMATION.md` for the adapter boundary, deterministic
 loop, and safety invariants.
 
+### Aetherfold Arena card-duel playground
+
+`demo/skyforge-card-duel.html` is a separate original card-duel sandbox. It
+uses three lanes, original cards, hand/energy decisions, core damage, and a
+deterministic local practice rival. It is not a recreation or adapter for a
+commercial card game.
+
+```bash
+python3 -m http.server 8083 --bind 127.0.0.1 --directory demo
+```
+
+Open <http://127.0.0.1:8083/skyforge-card-duel.html>, select a hand card,
+deploy it to an empty lane, then end the round. See
+`docs/SKYFORGE_CARD_DUEL.md`; the compact deterministic rules model is
+`questpilot/card_duel_mock.py`.
+
 The first publisher-supported extension is a bounded Minecraft Education
 Code Builder Agent script. See `adapters/minecraft_education/README.md` and
 `docs/ADAPTER_ROADMAP.md`; it runs only in an owned/demo Education world and
