@@ -54,6 +54,32 @@ PYTHONPATH=. python3 -m questpilot.benchmark
 PYTHONPATH=. python3 -m questpilot.product_benchmark
 ```
 
+## Skyforge Ledger original mock game
+
+`demo/original-mock-game.html` is a separate, original browser-local game for
+testing a complete daily loop and an automation strategy that controls **only
+that in-memory mock**. It has distinct names, mechanics, text, and UI; it is
+not a recreation or adapter for a commercial title.
+
+```bash
+python3 -m http.server 8082 --bind 127.0.0.1 --directory demo
+```
+
+Open <http://127.0.0.1:8082/original-mock-game.html>. **Run mock strategy**
+may automatically complete the original Skyforge Ledger world, while Manual
+action permits one visible step at a time. Both remain inside browser-local
+state. The core automation is in `questpilot/original_mock.py`; its fixed
+32-case benchmark and safety probes run with:
+
+![Skyforge Ledger original local mock screenshot](docs/screenshots/original-mock-game-local.png)
+
+```bash
+PYTHONPATH=. python3 -m questpilot.original_mock
+```
+
+See `docs/ORIGINAL_MOCK_AUTOMATION.md` for the adapter boundary, deterministic
+loop, and safety invariants.
+
 The first publisher-supported extension is a bounded Minecraft Education
 Code Builder Agent script. See `adapters/minecraft_education/README.md` and
 `docs/ADAPTER_ROADMAP.md`; it runs only in an owned/demo Education world and
